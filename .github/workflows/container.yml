@@ -27,5 +27,26 @@ jobs:
       - name: Build aarch64 binary
         run: cross build --release --target aarch64-unknown-linux-gnu
 
-      - name: Build arm64 binary
+      - name: Build amd64 binary
         run: cargo build --release
+
+      - name: Copy binaries to bin directory
+        run: |
+          mkdir bin
+          cp target/aarch64-unknown-linux-gnu/release/s3web bin/s3web-arm64
+          cp target/release/s3web bin/s3web-amd64
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/devon-mar/s3web
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
