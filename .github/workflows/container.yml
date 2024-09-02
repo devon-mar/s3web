@@ -30,14 +30,14 @@ jobs:
       - name: Build aarch64 binary
         run: cross build --release --target aarch64-unknown-linux-gnu
 
-      - name: Build amd64 binary
-        run: cargo build --release
+      - name: Build x86_64 binary
+        run: cross build --release --target x86_64-unknown-linux-gnu
 
       - name: Copy binaries to bin directory
         run: |
           mkdir bin
           cp target/aarch64-unknown-linux-gnu/release/s3web bin/s3web-arm64
-          cp target/release/s3web bin/s3web-amd64
+          cp target/x86_64-unknown-linux-gnu/release/s3web bin/s3web-amd64
 
       - name: Docker meta
         id: meta
