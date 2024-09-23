@@ -11,6 +11,7 @@ use clap::Parser;
 use config::{read_config, Config};
 use s3::{creds::Credentials, Bucket, Region};
 use std::{collections::HashMap, net::SocketAddr, process::exit, sync::Arc};
+use tokio::signal;
 use tracing::error;
 
 mod config;
@@ -75,7 +76,10 @@ async fn main() {
         .with_state(Arc::new(state));
 
     let listener = tokio::net::TcpListener::bind(args.listen).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
 }
 
 async fn root(
@@ -104,5 +108,30 @@ async fn root(
             }
         }
         None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+// https://github.com/tokio-rs/axum/blob/main/examples/graceful-shutdown/src/main.rs
+pub async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
     }
 }
